@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import typing
 from typing import (
     Dict,
@@ -527,10 +528,34 @@ class MipsArch(Arch):
     ]
     all_regs = saved_regs + temp_regs
 
-    aliased_regs = {
+    # o32 abi names
+    aliased_float_regs: Dict[str, Register] = {
+        "fv0":  Register("f0"),
+        "fv1":  Register("f2"),
+        "ft0":  Register("f4"),
+        "ft1":  Register("f6"),
+        "ft2":  Register("f8"),
+        "ft3":  Register("f10"),
+        "fa0":  Register("f12"),
+        "fa1":  Register("f14"),
+        "ft4":  Register("f16"),
+        "ft5":  Register("f18"),
+        "fs0":  Register("f20"),
+        "fs1":  Register("f22"),
+        "fs2":  Register("f24"),
+        "fs3":  Register("f26"),
+        "fs4":  Register("f28"),
+        "fs5":  Register("f30"),
+    }
+
+    aliased_gp_regs: Dict[str, Register] = {
         "s8": Register("fp"),
         "r0": Register("zero"),
     }
+
+    aliased_regs = { **aliased_float_regs, **aliased_gp_regs }
+
+    input_reg_names: Dict[str, List[Union[bool,str]]] = { reg.register_name: [False,reg.register_name] for reg in all_regs }
 
     @classmethod
     def missing_return(cls) -> List[Instruction]:

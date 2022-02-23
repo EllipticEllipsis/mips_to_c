@@ -193,6 +193,7 @@ class ArchAsmParsing(abc.ABC):
 
     all_regs: List[Register]
     aliased_regs: Dict[str, Register]
+    input_reg_names: Dict[str, List[Union[bool,str]]]
 
     @abc.abstractmethod
     def normalize_instruction(self, instr: AsmInstruction) -> AsmInstruction:
@@ -217,6 +218,7 @@ class ArchAsm(ArchAsmParsing):
     all_regs: List[Register]
 
     aliased_regs: Dict[str, Register]
+    input_reg_names: Dict[str, List[Union[bool,str]]]
 
     @abc.abstractmethod
     def missing_return(self) -> List[Instruction]:
@@ -314,7 +316,11 @@ def parse_arg_elems(arg_elems: List[str], arch: ArchAsmParsing) -> Optional[Argu
                 # If there is a second $ in the word, it's a symbol
                 value = AsmGlobalSymbol(word)
             elif reg in arch.aliased_regs:
+                # print(reg)
                 value = arch.aliased_regs[reg]
+                # print(value)
+                if not arch.input_reg_names[value.register_name][0]:
+                    arch.input_reg_names[value.register_name] = [True,reg]
             else:
                 value = Register(reg)
         elif tok == ".":
@@ -369,6 +375,8 @@ def parse_arg_elems(arg_elems: List[str], arch: ArchAsmParsing) -> Optional[Argu
             maybe_reg = Register(word)
             if word in arch.aliased_regs:
                 value = arch.aliased_regs[word]
+                if not arch.input_reg_names[value.register_name][0]:
+                    arch.input_reg_names[value.register_name] = [True,word]
             elif maybe_reg in arch.all_regs:
                 value = maybe_reg
             else:
