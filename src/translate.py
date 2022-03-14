@@ -87,6 +87,14 @@ class Arch(ArchFlowGraph):
     instrs_destination_first: InstrMap = {}
     instrs_implicit_destination: ImplicitInstrMap = {}
 
+    @classmethod
+    def convert_reg_name(cls, reg: str) -> Register:
+        return Register(reg)
+
+    @classmethod
+    def stringify_register(cls, reg: Register) -> str:
+        return reg.register_name
+
     @abc.abstractmethod
     def function_abi(
         self,
@@ -421,9 +429,9 @@ class StackInfo:
     def maybe_get_register_var(self, reg: Register) -> Optional["RegisterVar"]:
         return self.reg_vars.get(reg)
 
-    def add_register_var(self, reg: Register) -> None:
+    def add_register_var(self, reg: Register, var_name: str) -> None:
         type = Type.floatish() if reg.is_float() else Type.intptr()
-        self.reg_vars[reg] = RegisterVar(reg=reg, type=type)
+        self.reg_vars[reg] = RegisterVar(reg=reg, type=type, name=var_name)
 
     def use_register_var(self, var: "RegisterVar") -> None:
         self.used_reg_vars.add(var.reg)
@@ -1220,6 +1228,7 @@ class LocalVar(Expression):
 @dataclass(frozen=True, eq=False)
 class RegisterVar(Expression):
     reg: Register
+    name: str
     type: Type
 
     def dependencies(self) -> List[Expression]:
@@ -3749,7 +3758,7 @@ def assign_phis(used_phis: List[PhiExpr], stack_info: StackInfo) -> None:
         if not phi.replacement_expr and phi.propagates_to() == phi:
             counter = name_counter.get(phi.reg, 0) + 1
             name_counter[phi.reg] = counter
-            prefix = f"phi_{phi.reg.register_name}"
+            prefix = f"phi_{stack_info.global_info.arch.stringify_register(phi.reg)}"
             phi.name = f"{prefix}_{counter}" if counter > 1 else prefix
             stack_info.phi_vars.append(phi)
 
@@ -3910,7 +3919,7 @@ def translate_node_body(node: Node, regs: RegInfo, stack_info: StackInfo) -> Blo
                         expr,
                         emit_exactly_once=False,
                         trivial=False,
-                        prefix=r.register_name,
+                        prefix=arch.stringify_register(r),
                     )
 
                 # This write isn't changing the value of the register; it didn't need
@@ -3970,7 +3979,7 @@ def translate_node_body(node: Node, regs: RegInfo, stack_info: StackInfo) -> Blo
                 expr,
                 emit_exactly_once=False,
                 trivial=is_trivial_expression(expr),
-                prefix=reg.register_name,
+                prefix=arch.stringify_register(reg),
             )
 
         if reg == Register("zero"):
@@ -4237,7 +4246,7 @@ def translate_node_body(node: Node, regs: RegInfo, stack_info: StackInfo) -> Blo
                         val,
                         emit_exactly_once=False,
                         trivial=False,
-                        prefix=out.register_name,
+                        prefix=arch.stringify_register(reg),
                     )
                 regs.set_with_meta(out, val, RegMeta(function_return=True))
 
@@ -4352,7 +4361,7 @@ def translate_node_body(node: Node, regs: RegInfo, stack_info: StackInfo) -> Blo
                     expr,
                     emit_exactly_once=True,
                     trivial=False,
-                    prefix=reg.register_name,
+                    prefix=arch.stringify_register(reg),
                 )
                 if reg != Register("zero"):
                     set_reg_maybe_return(reg, expr)
@@ -4890,7 +4899,8 @@ def translate_to_ast(
     else:
         reg_vars = list(map(Register, options.reg_vars))
     for reg in reg_vars:
-        stack_info.add_register_var(reg)
+        converted_reg = arch.convert_reg_name(reg.register_name)
+        stack_info.add_register_var(converted_reg, reg.register_name)
 
     if options.debug:
         print(stack_info)

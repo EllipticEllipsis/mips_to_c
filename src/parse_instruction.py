@@ -316,9 +316,7 @@ def parse_arg_elems(arg_elems: List[str], arch: ArchAsmParsing) -> Optional[Argu
                 # If there is a second $ in the word, it's a symbol
                 value = AsmGlobalSymbol(word)
             elif reg in arch.aliased_regs:
-                # print(reg)
                 value = arch.aliased_regs[reg]
-                # print(value)
                 if not arch.input_reg_names[value.register_name][0]:
                     arch.input_reg_names[value.register_name] = [True,reg]
             else:

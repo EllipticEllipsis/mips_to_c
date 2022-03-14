@@ -557,6 +557,22 @@ class MipsArch(Arch):
 
     input_reg_names: Dict[str, List[Union[bool,str]]] = { reg.register_name: [False,reg.register_name] for reg in all_regs }
 
+    # Converts an input register name to its internal counterpart Register
+    @classmethod
+    def convert_reg_name(cls, reg: str) -> Register:
+        if reg in cls.aliased_regs:
+            return cls.aliased_regs[reg]
+        else:
+            return Register(reg)
+
+    # Reverts an internal register name to the one used in the input
+    @classmethod
+    def stringify_register(cls, reg: Register) -> str:
+        if reg.register_name in cls.input_reg_names:
+            return str(cls.input_reg_names[reg.register_name][1])
+        else:
+            return reg.register_name
+
     @classmethod
     def missing_return(cls) -> List[Instruction]:
         meta = InstructionMeta.missing()
