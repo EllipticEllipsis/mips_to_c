@@ -4246,7 +4246,7 @@ def translate_node_body(node: Node, regs: RegInfo, stack_info: StackInfo) -> Blo
                         val,
                         emit_exactly_once=False,
                         trivial=False,
-                        prefix=arch.stringify_register(reg),
+                        prefix=arch.stringify_register(out),
                     )
                 regs.set_with_meta(out, val, RegMeta(function_return=True))
 
